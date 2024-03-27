@@ -1,0 +1,3514 @@
+openapi: 3.0.1
+info:
+  description: Oyster uses OAuth2 to enable customers to grant access to their data
+    to third party applications. Customers also need to use this API to authenticate
+    themselves when making API requests.
+  license:
+    name: MIT
+  title: Endpoints
+  version: v1
+servers:
+- url: https://api.oysterhr.com
+tags:
+- description: |-
+    With the Time Off API, you can manage your team's time off requests.
+    You can approve or decline specific time off requests, access information about a particular request, and get updates on all time off requests.
+    It also provides details on time off entitlements for each engagement within the company
+  name: Time Off
+- description: "Expenses API allows you to remotely manage expenses of your team.\
+    \ \nApprove or decline a specific expense, get info about a specific expense or\
+    \ receive real-time information about all expenses."
+  name: Expenses
+- name: Engagements
+- name: Payroll
+- name: Authentication
+- name: Company
+- name: Departments
+- name: Operations
+paths:
+  /oauth2/token:
+    post:
+      description: |
+        Oyster grants access to API resources based on OAuth. This means that individual customers grant API access to Developer Apps that you create. This applies to both customers and partners. Follow these simple steps: <br><br> 1. [Create an Oyster account](https://app.oysterhr.com/sign_up) or [log in](https://app.oysterhr.com/users/sign_in) to your existing account. <br> <br> 2. Create an Oyster Developer App in the [Developer Tab](https://app.oysterhr.com/developer) (If you can't see the developer tab please contact us to enable it for your account). <br> Hint: If you are a customer doing this as a one time action you don't need to specify a functioning URL as step 3 will explain. <br> <br> 3. If you are a customer you can simply click on the "Authorization URL" and grant access to your own app. You will be redirected to the URL you specified when creating the Developer App. In the URL you will see that `?code=xxx` has been added to the URL. This is the `code` you need to create an access token. <br> If you are a partner add "Authorization URL to your application. The redirect_url should be a URL that goes back to your app and you're able to programmatically retrieve the URL query param of `?code=xxx` to then create an access token. <br> <br> 4. You need to first request an `authorization_code` with the API request detailed below. This will provide an `access_token` that is used as the Bearer Token for making API requests to Oyster. Ensure that you store the `refresh_token` for making future API requests. <br> <br> 5. If your `access_token` has expired then request a new one using your `refresh_token` that you have stored earlier. Ensure you store the new `refresh_token` each time as the previous ones will expire.
+      operationId: Authentication_createAccessToken
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthenticationCreateAccessTokenRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+          description: Create an access token to make an API request
+      summary: Create an access token
+      tags:
+      - Authentication
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--oauth2-token
+      x-content-type: application/x-www-form-urlencoded
+      x-accepts: application/json
+  /v1/expenses/{id}/approve:
+    post:
+      description: Approves an expense.
+      operationId: Expenses_approveExpense
+      parameters:
+      - description: Expense ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: Successful
+        "403":
+          content:
+            application/json:
+              examples:
+                an invalid OAuth scope:
+                  value:
+                    error:
+                      message: Access to this resource requires scope "manage".
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid OAuth scope
+          x-do-not-generate: true
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+        "422":
+          content:
+            application/json:
+              examples:
+                Operation cannot be performed:
+                  value:
+                    errors:
+                    - message: Expense has been approved already
+              schema:
+                $ref: '#/components/schemas/errors'
+          description: Operation cannot be performed
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - manage
+      summary: Approve expense
+      tags:
+      - Expenses
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--v1-expenses-id-approve
+      x-accepts: application/json
+  /v1/expenses/{id}/decline:
+    post:
+      description: Declines an expense.
+      operationId: Expenses_declineExpense
+      parameters:
+      - description: Expense ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            examples:
+              Successful:
+                summary: Successful
+                value:
+                  reason: exceeds budget for this period
+            schema:
+              $ref: '#/components/schemas/ExpensesDeclineExpenseRequest'
+      responses:
+        "200":
+          description: Successful
+        "403":
+          content:
+            application/json:
+              examples:
+                an invalid OAuth scope:
+                  value:
+                    error:
+                      message: Access to this resource requires scope "manage".
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid OAuth scope
+          x-do-not-generate: true
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+        "422":
+          content:
+            application/json:
+              examples:
+                Operation cannot be performed:
+                  value:
+                    errors:
+                    - message: Expense has been declined already
+              schema:
+                $ref: '#/components/schemas/errors'
+          description: Operation cannot be performed
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - manage
+      summary: Decline expense
+      tags:
+      - Expenses
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--v1-expenses-id-decline
+      x-content-type: application/json
+      x-accepts: application/json
+  /v1/expenses/{id}:
+    get:
+      description: Returns details for an expense with a given expense ID.
+      operationId: Expenses_getById
+      parameters:
+      - description: Expense ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    data:
+                      description: Quia amet incidunt. Deleniti odit et. Repellendus
+                        id harum.
+                      expenseId: zxbhh9d8
+                      name: Thanksgiving Volcano coffee
+                      amount:
+                        decimal: "631.87"
+                        currencyCode: EUR
+                      category: CAR
+                      incurredOn: 2022-10-15
+                      submittedAt: 2022-10-15T12:34:56Z
+                      reviewState: UNREVIEWED
+                      reviewedAt: null
+                      receiptAmount:
+                        decimal: "631.87"
+                        currencyCode: USD
+                      receiptUrl: null
+                      engagement:
+                        engagementId: SsvwPW9p
+                        name: null
+                        engagementType: EMPLOYMENT
+                      source: OYSTER
+              schema:
+                $ref: '#/components/schemas/ExpensesGetByIdResponse'
+          description: Successful
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve an individual expense
+      tags:
+      - Expenses
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-expenses-id
+      x-accepts: application/json
+  /v1/expenses:
+    post:
+      description: Creates a new expense for an engagement. This is an asynchronous
+        operation. Returns operationKey that can be used to retrieve the operation
+        to know if it's successfully completed
+      operationId: Expenses_createOperationKey
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            examples:
+              Successfully created async operation:
+                summary: Successfully created async operation
+                value:
+                  description: ""
+                  engagementId: Xse7pSwV
+                  name: An expense
+                  category: HOME_OFFICE
+                  incurredOn: 2022-10-15
+                  receiptAmount:
+                    decimal: "1.23"
+                    currencyCode: GBP
+                  receiptUrl: https://www.example.com/receipts/test.pdf
+            schema:
+              $ref: '#/components/schemas/ExpensesCreateOperationKeyRequest'
+      responses:
+        "202":
+          content:
+            application/json:
+              examples:
+                Successfully created async operation:
+                  value:
+                    meta:
+                      operationKey: 5702f2db-6f1c-4da3-9b16-414dad0271ee
+              schema:
+                $ref: '#/components/schemas/asyncResponse'
+          description: Successfully created async operation
+        "400":
+          content:
+            application/json:
+              examples:
+                improperly structured JSON:
+                  value:
+                    errors:
+                    - field: engagementId
+                      message: Engagement id is in invalid format
+                    - field: name
+                      message: Name must be filled
+                    - field: incurredOn
+                      message: Incurred on must be a date
+                    - field: category
+                      message: Category is in invalid format
+                    - field: receiptUrl
+                      message: Receipt url is in invalid format
+                    - field: receiptAmount.decimal
+                      message: Receipt amount decimal must be a string
+                    - field: receiptAmount.currencyCode
+                      message: Receipt amount currency code is in invalid format
+              schema:
+                $ref: '#/components/schemas/fieldErrors'
+          description: improperly structured JSON
+          x-do-not-generate: true
+        "403":
+          content:
+            application/json:
+              examples:
+                an invalid OAuth scope:
+                  value:
+                    error:
+                      message: Access to this resource requires scope "manage".
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid OAuth scope
+          x-do-not-generate: true
+        "422":
+          content:
+            application/json:
+              examples:
+                Unprocessable entity:
+                  value:
+                    errors:
+                    - message: Category must have a valid category
+              schema:
+                $ref: '#/components/schemas/fieldErrors'
+          description: Unprocessable entity
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - manage
+      summary: Create expense
+      tags:
+      - Expenses
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--v1-expenses
+      x-content-type: application/json
+      x-accepts: application/json
+  /v1/company:
+    get:
+      description: Returns details about the connected company
+      operationId: Company_detailsRetrieve
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    data:
+                      companyId: uPeGkqOp
+                      name: company 00035 name
+                      registrationNumber: S4866459C
+                      addresses:
+                        corporateAddress:
+                          addressId: KgmrAgaO
+                          addressLine1: 448 Bernita Locks
+                          addressLine2: Autumn Crossing
+                          city: New Leshastad
+                          region: OK
+                          countryCode: CA
+                          postalCode: "64367"
+                        billingAddress:
+                          addressId: RvXZpmBP
+                          addressLine1: 317 Isiah Passage
+                          addressLine2: Eagle Place
+                          city: Kerlukehaven
+                          region: UT
+                          countryCode: AU
+                          postalCode: 91386-6007
+              schema:
+                $ref: '#/components/schemas/CompanyDetailsRetrieveResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve company details
+      tags:
+      - Company
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-company
+      x-accepts: application/json
+  /v1/departments:
+    get:
+      description: Returns a list of departments
+      operationId: Departments_getAll
+      parameters:
+      - explode: true
+        in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                No departments:
+                  value:
+                    data: []
+                    meta:
+                      items: 100
+                      count: 0
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/departments?perPage=100&page=1
+                      lastUrl: /v1/departments?perPage=100&page=1
+                      pageUrl: /v1/departments?perPage=100&page=1
+                      nextUrl: /v1/departments?perPage=100&page=
+                      prevUrl: /v1/departments?perPage=100&page=
+                Successful:
+                  value:
+                    data:
+                    - description: Listicle authentic fingerstache paleo kombucha
+                        shoreditch yr.
+                      departmentId: V5PNwnEh
+                      name: Health & Beauty
+                      engagementsCount: 0
+                    - description: Kale chips slow-carb tote bag tofu portland 3 wolf
+                        moon bespoke letterpress.
+                      departmentId: MK0nqu2W
+                      name: Toys
+                      engagementsCount: 0
+                    - description: Taxidermy meh try-hard yr echo waistcoat ramps
+                        ennui.
+                      departmentId: f2I3ilRT
+                      name: Outdoors & Grocery
+                      engagementsCount: 0
+                    - description: Yolo vhs xoxo park blue bottle artisan sustainable
+                        polaroid.
+                      departmentId: NyEkcAoV
+                      name: Toys & Sports
+                      engagementsCount: 0
+                    - description: Post-ironic typewriter irony church-key food truck
+                        cardigan.
+                      departmentId: dTOzpd6Y
+                      name: Outdoors
+                      engagementsCount: 0
+                    meta:
+                      items: 100
+                      count: 5
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/departments?perPage=100&page=1
+                      lastUrl: /v1/departments?perPage=100&page=1
+                      pageUrl: /v1/departments?perPage=100&page=1
+                      nextUrl: /v1/departments?perPage=100&page=
+                      prevUrl: /v1/departments?perPage=100&page=
+              schema:
+                $ref: '#/components/schemas/DepartmentsGetAllResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve all departments
+      tags:
+      - Departments
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-departments
+      x-accepts: application/json
+  /v1/engagements/{id}:
+    get:
+      description: Returns details for an engagement with a given engagement ID.
+      operationId: Engagements_getById
+      parameters:
+      - description: Engagement ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    data:
+                      engagementId: uxiFbbaK
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: EMPLOYMENT
+                      state: DRAFT
+                      role: Principal Technology Planner
+                      countryCode: CW
+                      personalDetails:
+                        name: Laurette Anderson
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      employment:
+                        employmentId: uxiFbbaK
+                        fullLegalName: null
+                        email: null
+                        employmentType: null
+                        lastDayOn: null
+                        salary:
+                          decimal: "12345.00"
+                          currencyCode: EUR
+                      contract: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+              schema:
+                $ref: '#/components/schemas/EngagementsGetByIdResponse'
+          description: Successful
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve an individual engagement
+      tags:
+      - Engagements
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-engagements-id
+      x-accepts: application/json
+  /v1/engagements:
+    get:
+      description: Returns a list of engagements
+      operationId: Engagements_getAll
+      parameters:
+      - explode: true
+        in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                No engagements:
+                  value:
+                    data: []
+                    meta:
+                      items: 100
+                      count: 0
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/engagements?perPage=100&page=1
+                      lastUrl: /v1/engagements?perPage=100&page=1
+                      pageUrl: /v1/engagements?perPage=100&page=1
+                      nextUrl: /v1/engagements?perPage=100&page=
+                      prevUrl: /v1/engagements?perPage=100&page=
+                Successful:
+                  value:
+                    data:
+                    - engagementId: 2ug3WBT0
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: EMPLOYMENT
+                      state: DRAFT
+                      role: Banking Supervisor Consultant
+                      countryCode: MF
+                      personalDetails:
+                        name: null
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      livingAddress: null
+                      mailingAddress: null
+                      employment:
+                        employmentId: 2ug3WBT0
+                        name: Rep Melda Stark
+                        fullLegalName: Rep Melda Stark
+                        email: james.treutel@mayer.test
+                        employmentType: null
+                        lastDayOn: null
+                        salarySubunit: 1234500
+                        salaryCurrencyCode: EUR
+                        salary:
+                          decimal: "12345.00"
+                          currencyCode: EUR
+                      contract: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+                      usefulInfo: null
+                    - engagementId: AVT7lRbj
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: EMPLOYMENT
+                      state: DRAFT
+                      role: Corporate Manufacturing Liaison Consultant
+                      countryCode: NZ
+                      personalDetails:
+                        name: null
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      livingAddress: null
+                      mailingAddress: null
+                      employment:
+                        employmentId: AVT7lRbj
+                        name: Winston Breitenberg
+                        fullLegalName: Winston Breitenberg
+                        email: estrella.tromp@green-greenfelder.test
+                        employmentType: null
+                        lastDayOn: null
+                        salarySubunit: 1234500
+                        salaryCurrencyCode: EUR
+                        salary:
+                          decimal: "12345.00"
+                          currencyCode: EUR
+                      contract: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+                      usefulInfo: null
+                    - engagementId: yBY8ab5n
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: EMPLOYMENT
+                      state: DRAFT
+                      role: Education Manager Consultant
+                      countryCode: UG
+                      personalDetails:
+                        name: null
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      livingAddress: null
+                      mailingAddress: null
+                      employment:
+                        employmentId: yBY8ab5n
+                        name: Delia Ward
+                        fullLegalName: Delia Ward
+                        email: shawn.bauch@kerluke.test
+                        employmentType: null
+                        lastDayOn: null
+                        salarySubunit: 1234500
+                        salaryCurrencyCode: EUR
+                        salary:
+                          decimal: "12345.00"
+                          currencyCode: EUR
+                      contract: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+                      usefulInfo: null
+                    - engagementId: VVlXNYcy
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: CONTRACT
+                      state: IN_PROGRESS
+                      role: Future Specialist Consultant
+                      countryCode: MG
+                      personalDetails:
+                        name: Henry Reichert
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      livingAddress: null
+                      mailingAddress: null
+                      employment: null
+                      contract:
+                        contractId: VVlXNYcy
+                        name: Bethanie Turcotte
+                        email: song@wiegand-ledner.test
+                        billingType: FIXED
+                        taxIdNumber: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+                      usefulInfo: null
+                    - engagementId: kUhg4dS4
+                      modifiedAt: 2022-10-15T12:34:56Z
+                      startDate: 2022-10-15
+                      engagementType: CONTRACT
+                      state: IN_PROGRESS
+                      role: Customer Banking Strategist Consultant
+                      countryCode: HK
+                      personalDetails:
+                        name: Anibal Bins
+                        addresses:
+                          livingAddress: null
+                          mailingAddress: null
+                      livingAddress: null
+                      mailingAddress: null
+                      employment: null
+                      contract:
+                        contractId: kUhg4dS4
+                        name: Mr. Ronnie Klocko
+                        email: irvin.medhurst@mohr.example
+                        billingType: FIXED
+                        taxIdNumber: null
+                      benefitEnrollments: []
+                      terminations: []
+                      department: null
+                    meta:
+                      items: 100
+                      count: 5
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/engagements?perPage=100&page=1
+                      lastUrl: /v1/engagements?perPage=100&page=1
+                      pageUrl: /v1/engagements?perPage=100&page=1
+                      nextUrl: /v1/engagements?perPage=100&page=
+                      prevUrl: /v1/engagements?perPage=100&page=
+              schema:
+                $ref: '#/components/schemas/EngagementsGetAllResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve all engagements
+      tags:
+      - Engagements
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-engagements
+      x-accepts: application/json
+  /v1/meta/operations/{operation_key}:
+    get:
+      description: Returns details for an operation with a given operation key.
+      operationId: Operations_getByOperationKey
+      parameters:
+      - description: Operation key
+        explode: false
+        in: path
+        name: operation_key
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    request:
+                      method: GET
+                      path: /resources
+                      queryParams:
+                        foo: bar
+                      responseCode: 200
+                    data:
+                      foo: bar
+                      bar: baz
+                    meta:
+                      completed: true
+                      success: true
+              schema:
+                $ref: '#/components/schemas/OperationsGetByOperationKeyResponse'
+          description: Successful
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve an operation
+      tags:
+      - Operations
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-meta-operations-operation_key
+      x-accepts: application/json
+  /v1/payroll/{id}:
+    get:
+      description: Returns details for a payroll with a given payroll ID.
+      operationId: Payroll_getById
+      parameters:
+      - description: Payroll ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    data:
+                      payrollId: UmTDnTUV
+                      currencyCode: USD
+                      cutoffTimeForPayroll: 2022-10-07T05:00:00.000Z
+                      state: DRAFT
+                      payrollRecordsCount: 2
+                      records:
+                      - engagementId: CjVBtL3E
+                        currencyCode: EUR
+                        monthlyPaymentsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        allowancesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        benefitsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        bonusesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        addOnsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        taxesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        trueUpsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        oysterFeesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        engagement:
+                          name: Georgeann Hintz
+                          cutoffMonthDay: 6
+                          engagementType: EMPLOYMENT
+                      - engagementId: R73L6T8L
+                        currencyCode: EUR
+                        monthlyPaymentsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        allowancesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        benefitsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        bonusesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        addOnsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        taxesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        trueUpsTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        oysterFeesTotalAmount:
+                          decimal: "0.00"
+                          currencyCode: USD
+                        engagement:
+                          name: Msgr Floyd Streich
+                          cutoffMonthDay: 6
+                          engagementType: EMPLOYMENT
+              schema:
+                $ref: '#/components/schemas/PayrollGetByIdResponse'
+          description: Successful
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve an individual payroll
+      tags:
+      - Payroll
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-payroll-id
+      x-accepts: application/json
+  /v1/payroll:
+    get:
+      description: Returns a list of payrolls
+      operationId: Payroll_getAllPayrolls
+      parameters:
+      - explode: true
+        in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: from
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: to
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: include_records
+        required: false
+        schema:
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                No payrolls:
+                  value:
+                    data: []
+                    meta:
+                      items: 100
+                      count: 0
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/payroll?perPage=100&page=1&from=&to=&includeRecords=
+                      lastUrl: /v1/payroll?perPage=100&page=1&from=&to=&includeRecords=
+                      pageUrl: /v1/payroll?perPage=100&page=1&from=&to=&includeRecords=
+                      nextUrl: /v1/payroll?perPage=100&page=&from=&to=&includeRecords=
+                      prevUrl: /v1/payroll?perPage=100&page=&from=&to=&includeRecords=
+                Successful:
+                  value:
+                    data:
+                    - payrollId: abw0ovv2
+                      currencyCode: USD
+                      cutoffTimeForPayroll: 2022-10-07T05:00:00.000Z
+                      state: DRAFT
+                      payrollRecordsCount: 2
+                    - payrollId: ED6xssq7
+                      currencyCode: USD
+                      cutoffTimeForPayroll: 2022-10-07T05:00:00.000Z
+                      state: DRAFT
+                      payrollRecordsCount: 2
+                    meta:
+                      items: 100
+                      count: 2
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/payroll?perPage=100&page=1&from=2023-03&to=2023-04&includeRecords=
+                      lastUrl: /v1/payroll?perPage=100&page=1&from=2023-03&to=2023-04&includeRecords=
+                      pageUrl: /v1/payroll?perPage=100&page=1&from=2023-03&to=2023-04&includeRecords=
+                      nextUrl: /v1/payroll?perPage=100&page=&from=2023-03&to=2023-04&includeRecords=
+                      prevUrl: /v1/payroll?perPage=100&page=&from=2023-03&to=2023-04&includeRecords=
+              schema:
+                $ref: '#/components/schemas/PayrollGetAllPayrollsResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve all payroll
+      tags:
+      - Payroll
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-payroll
+      x-accepts: application/json
+  /v1/time_off/entitlements:
+    get:
+      description: Returns entitlements for each engagement of the company.
+      operationId: TimeOff_getEntitlements
+      parameters:
+      - explode: true
+        in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                No engagements:
+                  value:
+                    data: []
+                    meta:
+                      items: 100
+                      count: 0
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      lastUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      pageUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      nextUrl: /v1/time_off/entitlements?perPage=100&page=
+                      prevUrl: /v1/time_off/entitlements?perPage=100&page=
+                Successful:
+                  value:
+                    data:
+                    - engagement:
+                        engagementId: AaaEAOPo
+                        name: Brad Doe
+                        type: EMPLOYMENT
+                        countryCode: GB
+                      annualEntitlement: 30
+                      accrued: 30
+                      carried: 0
+                      adjustedAdhoc: 0
+                      taken: 0
+                      availableBalance: 29
+                      upcoming: 0
+                      projectedBalance: 29
+                      units: DAYS
+                    - engagement:
+                        engagementId: vPiWNX7X
+                        name: John Mark
+                        type: EMPLOYMENT
+                        countryCode: GB
+                      annualEntitlement: 24.5
+                      accrued: 24.5
+                      carried: 0
+                      adjustedAdhoc: 0
+                      taken: 0
+                      availableBalance: 24.5
+                      upcoming: 0
+                      projectedBalance: 24.5
+                      units: DAYS
+                    meta:
+                      items: 100
+                      count: 2
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      lastUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      pageUrl: /v1/time_off/entitlements?perPage=100&page=1
+                      nextUrl: /v1/time_off/entitlements?perPage=100&page=
+                      prevUrl: /v1/time_off/entitlements?perPage=100&page=
+              schema:
+                $ref: '#/components/schemas/TimeOffGetEntitlementsResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve entitlements
+      tags:
+      - Time Off
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-time_off-entitlements
+      x-accepts: application/json
+  /v1/time_off/requests/{id}/approve:
+    post:
+      description: Approves a time off request.
+      operationId: TimeOff_approveRequest
+      parameters:
+      - description: Time Off Request ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+        "403":
+          content:
+            application/json:
+              examples:
+                an invalid OAuth scope:
+                  value:
+                    error:
+                      message: Access to this resource requires scope "manage".
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid OAuth scope
+          x-do-not-generate: true
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+        "422":
+          content:
+            application/json:
+              examples:
+                Operation cannot be performed:
+                  value:
+                    errors:
+                    - message: Can't approve a request that's in the APPROVED state
+              schema:
+                $ref: '#/components/schemas/errors'
+          description: Operation cannot be performed
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - manage
+      summary: Approve request
+      tags:
+      - Time Off
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--v1-time_off-requests-id-approve
+      x-accepts: application/json
+  /v1/time_off/requests/{id}/reject:
+    post:
+      description: Rejects a time off request.
+      operationId: TimeOff_rejectRequest
+      parameters:
+      - description: Time Off Request ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            examples:
+              Successful:
+                summary: Successful
+                value:
+                  reason: We need you!
+            schema:
+              $ref: '#/components/schemas/TimeOffRejectRequestRequest'
+      responses:
+        "200":
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+        "403":
+          content:
+            application/json:
+              examples:
+                an invalid OAuth scope:
+                  value:
+                    error:
+                      message: Access to this resource requires scope "manage".
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid OAuth scope
+          x-do-not-generate: true
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+        "422":
+          content:
+            application/json:
+              examples:
+                Operation cannot be performed:
+                  value:
+                    errors:
+                    - message: Can't reject a request that's in the REJECTED state
+              schema:
+                $ref: '#/components/schemas/errors'
+          description: Operation cannot be performed
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - manage
+      summary: Reject request
+      tags:
+      - Time Off
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-post--v1-time_off-requests-id-reject
+      x-content-type: application/json
+      x-accepts: application/json
+  /v1/time_off/requests/{id}:
+    get:
+      description: Returns details for a request.
+      operationId: TimeOff_getRequest
+      parameters:
+      - description: Time Off Request ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                Successful:
+                  value:
+                    data:
+                      timeOffRequestId: 6tkQOMxy
+                      engagement:
+                        engagementId: AhbNxBVN
+                        name: Lizette Paucek
+                        type: EMPLOYMENT
+                        countryCode: PK
+                      startDate: 2022-02-01
+                      endDate: 2022-02-02
+                      firstDayDuration: FULL_DAY
+                      lastDayDuration: FULL_DAY
+                      state: SUBMITTED
+                      type: VACATION
+                      requesterComments: Need a rest
+                      rejectionReason: null
+                      reason: PAID_TIME_OFF
+                      periodInHours: 16
+              schema:
+                $ref: '#/components/schemas/TimeOffGetRequestResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+        "404":
+          description: "Resource does not exist, or no permission to access resource"
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve an individual request
+      tags:
+      - Time Off
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-time_off-requests-id
+      x-accepts: application/json
+  /v1/time_off/requests:
+    get:
+      description: Returns all Time Off Requests for a company.
+      operationId: TimeOff_getAllRequests
+      parameters:
+      - explode: true
+        in: query
+        name: per_page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                No requests:
+                  value:
+                    data: []
+                    meta:
+                      items: 100
+                      count: 0
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/time_off/requests?perPage=100&page=1
+                      lastUrl: /v1/time_off/requests?perPage=100&page=1
+                      pageUrl: /v1/time_off/requests?perPage=100&page=1
+                      nextUrl: /v1/time_off/requests?perPage=100&page=
+                      prevUrl: /v1/time_off/requests?perPage=100&page=
+                Successful:
+                  value:
+                    data:
+                    - timeOffRequestId: aR1F7cum
+                      engagement:
+                        engagementId: K2HrjqDi
+                        name: Alonso Hyatt
+                        type: EMPLOYMENT
+                        countryCode: LV
+                      startDate: 2022-02-01
+                      endDate: 2022-02-02
+                      firstDayDuration: FULL_DAY
+                      lastDayDuration: FULL_DAY
+                      state: SUBMITTED
+                      type: VACATION
+                      requesterComments: Need a rest
+                      rejectionReason: null
+                      reason: PAID_TIME_OFF
+                      periodInHours: 16
+                    - timeOffRequestId: xaQYmvy3
+                      engagement:
+                        engagementId: y9UvCkMi
+                        name: Msgr. Juan Larson
+                        type: EMPLOYMENT
+                        countryCode: GS
+                      startDate: 2022-02-01
+                      endDate: 2022-02-02
+                      firstDayDuration: FULL_DAY
+                      lastDayDuration: FULL_DAY
+                      state: SUBMITTED
+                      type: VACATION
+                      requesterComments: Need a rest
+                      rejectionReason: null
+                      reason: PAID_TIME_OFF
+                      periodInHours: 16
+                    - timeOffRequestId: ADyXwhvf
+                      engagement:
+                        engagementId: 2ueHWmjt
+                        name: Shayne Runte
+                        type: EMPLOYMENT
+                        countryCode: NC
+                      startDate: 2022-02-01
+                      endDate: 2022-02-02
+                      firstDayDuration: FULL_DAY
+                      lastDayDuration: FULL_DAY
+                      state: SUBMITTED
+                      type: VACATION
+                      requesterComments: Need a rest
+                      rejectionReason: null
+                      reason: PAID_TIME_OFF
+                      periodInHours: 16
+                    meta:
+                      items: 100
+                      count: 3
+                      page: 1
+                      pages: 1
+                      firstUrl: /v1/time_off/requests?perPage=100&page=1
+                      lastUrl: /v1/time_off/requests?perPage=100&page=1
+                      pageUrl: /v1/time_off/requests?perPage=100&page=1
+                      nextUrl: /v1/time_off/requests?perPage=100&page=
+                      prevUrl: /v1/time_off/requests?perPage=100&page=
+              schema:
+                $ref: '#/components/schemas/TimeOffGetAllRequestsResponse'
+          description: Successful
+        "401":
+          content:
+            application/json:
+              examples:
+                an invalid access token:
+                  value:
+                    error:
+                      message: The access token is invalid
+              schema:
+                $ref: '#/components/schemas/error'
+          description: an invalid access token
+          x-do-not-generate: true
+      security:
+      - bearer_auth:
+        - read
+      summary: Retrieve all requests
+      tags:
+      - Time Off
+      x-konfig-operation-can-have-single-parameter: true
+      x-konfig-single-parameter-schema: konfig-generated-schema-single-parameter-schema-get--v1-time_off-requests
+      x-accepts: application/json
+components:
+  schemas:
+    Token:
+      example:
+        access_token: 1234ABCD
+        refresh_token: 1234ABCD
+        scope: read
+        created_at: 167474949830
+        token_type: Bearer
+        expires_in: 7200
+      properties:
+        access_token:
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-access_token
+        token_type:
+          example: Bearer
+          type: string
+          x-konfig-original-example: Bearer
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-token_type
+        expires_in:
+          example: 7200
+          type: number
+          x-konfig-original-example: 7200
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-expires_in
+        refresh_token:
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-refresh_token
+        scope:
+          example: read
+          type: string
+          x-konfig-original-example: read
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-scope
+        created_at:
+          example: 167474949830
+          type: number
+          x-konfig-original-example: 167474949830
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-Token-properties-created_at
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    address:
+      example:
+        city: city
+        countryCode: countryCode
+        postalCode: postalCode
+        addressLine1: addressLine1
+        addressLine2: addressLine2
+        region: region
+        addressId: addressId
+      properties:
+        addressId:
+          type: string
+        addressLine1:
+          nullable: true
+          type: string
+        addressLine2:
+          nullable: true
+          type: string
+        city:
+          nullable: true
+          type: string
+        region:
+          nullable: true
+          type: string
+        countryCode:
+          nullable: true
+          type: string
+        postalCode:
+          nullable: true
+          type: string
+      required:
+      - addressId
+      - addressLine1
+      - postalCode
+      type: object
+    amount:
+      example:
+        decimal: decimal
+        currencyCode: currencyCode
+      properties:
+        decimal:
+          pattern: "^\\d+([.]\\d+)?$"
+          type: string
+        currencyCode:
+          maxLength: 3
+          minLength: 3
+          type: string
+      required:
+      - currencyCode
+      - decimal
+      type: object
+    phoneNumber:
+      example:
+        number: number
+        countryCode: countryCode
+      properties:
+        countryCode:
+          nullable: true
+          type: string
+        number:
+          type: string
+      required:
+      - number
+      type: object
+    company:
+      example:
+        companyId: companyId
+        addresses:
+          corporateAddress:
+            city: city
+            countryCode: countryCode
+            postalCode: postalCode
+            addressLine1: addressLine1
+            addressLine2: addressLine2
+            region: region
+            addressId: addressId
+          billingAddress:
+            city: city
+            countryCode: countryCode
+            postalCode: postalCode
+            addressLine1: addressLine1
+            addressLine2: addressLine2
+            region: region
+            addressId: addressId
+        registrationNumber: registrationNumber
+        name: name
+      properties:
+        companyId:
+          type: string
+        name:
+          type: string
+        registrationNumber:
+          type: string
+        addresses:
+          $ref: '#/components/schemas/company_addresses'
+      required:
+      - addresses
+      - companyId
+      - name
+      - registrationNumber
+      type: object
+    department:
+      example:
+        departmentId: departmentId
+        name: name
+        description: description
+        engagementsCount: 0
+      properties:
+        description:
+          nullable: true
+          type: string
+        departmentId:
+          type: string
+        name:
+          type: string
+        engagementsCount:
+          type: integer
+      required:
+      - departmentId
+      - description
+      - engagementsCount
+      - name
+      type: object
+    departments:
+      items:
+        $ref: '#/components/schemas/department'
+      type: array
+    engagement:
+      example:
+        role: role
+        modifiedAt: 2000-01-23T04:56:07.000+00:00
+        contract: "{}"
+        engagementType: EMPLOYMENT
+        employment: "{}"
+        countryCode: countryCode
+        benefitEnrollments:
+        - benefitEnrollmentId: benefitEnrollmentId
+          name: name
+          state: state
+          plan:
+            descriptiveName: descriptiveName
+            provider: provider
+        - benefitEnrollmentId: benefitEnrollmentId
+          name: name
+          state: state
+          plan:
+            descriptiveName: descriptiveName
+            provider: provider
+        personalDetails:
+          addresses:
+            livingAddress:
+              city: city
+              countryCode: countryCode
+              postalCode: postalCode
+              addressLine1: addressLine1
+              addressLine2: addressLine2
+              region: region
+              addressId: addressId
+            mailingAddress:
+              city: city
+              countryCode: countryCode
+              postalCode: postalCode
+              addressLine1: addressLine1
+              addressLine2: addressLine2
+              region: region
+              addressId: addressId
+          citizenships:
+          - citizenships
+          - citizenships
+          name: name
+          dateOfBirth: dateOfBirth
+          phoneNumbers:
+            default:
+              number: number
+              countryCode: countryCode
+            emergency:
+              number: number
+              countryCode: countryCode
+        state: state
+        terminations:
+        - proposedDate: 2000-01-23
+          state: state
+        - proposedDate: 2000-01-23
+          state: state
+        department:
+          departmentId: departmentId
+          name: name
+          description: description
+        engagementId: engagementId
+        startDate: 2000-01-23
+      properties:
+        engagementId:
+          type: string
+        modifiedAt:
+          format: date-time
+          type: string
+        startDate:
+          format: date
+          type: string
+        engagementType:
+          enum:
+          - EMPLOYMENT
+          - CONTRACT
+          type: string
+        state:
+          type: string
+        role:
+          type: string
+        countryCode:
+          type: string
+        personalDetails:
+          $ref: '#/components/schemas/engagement_personalDetails'
+        employment:
+          nullable: true
+          type: object
+        contract:
+          nullable: true
+          type: object
+        benefitEnrollments:
+          items:
+            $ref: '#/components/schemas/engagement_benefitEnrollments_inner'
+          type: array
+        terminations:
+          items:
+            $ref: '#/components/schemas/engagement_terminations_inner'
+          type: array
+        department:
+          $ref: '#/components/schemas/engagement_department'
+      required:
+      - countryCode
+      - engagementId
+      - engagementType
+      - personalDetails
+      - role
+      - startDate
+      type: object
+    engagements:
+      items:
+        $ref: '#/components/schemas/engagement'
+      type: array
+    expense:
+      example:
+        amount:
+          decimal: decimal
+          currencyCode: currencyCode
+        engagement:
+          name: name
+          engagementType: engagementType
+          engagementId: engagementId
+        incurredOn: 2000-01-23
+        reviewedAt: 2000-01-23T04:56:07.000+00:00
+        description: description
+        source: source
+        receiptAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        expenseId: expenseId
+        name: name
+        category: category
+        submittedAt: 2000-01-23T04:56:07.000+00:00
+        reviewState: reviewState
+        receiptUrl: https://openapi-generator.tech
+      properties:
+        description:
+          nullable: true
+          type: string
+        expenseId:
+          type: string
+        name:
+          type: string
+        amount:
+          $ref: '#/components/schemas/amount'
+        category:
+          pattern: "^[A-Z_]+$"
+          type: string
+        incurredOn:
+          format: date
+          type: string
+        submittedAt:
+          format: date-time
+          type: string
+        reviewState:
+          type: string
+        reviewedAt:
+          format: date-time
+          nullable: true
+          type: string
+        receiptAmount:
+          $ref: '#/components/schemas/amount'
+        receiptUrl:
+          format: uri
+          nullable: true
+          type: string
+        engagement:
+          $ref: '#/components/schemas/expense_engagement'
+        source:
+          type: string
+      required:
+      - amount
+      - category
+      - expenseId
+      - name
+      - receiptAmount
+      type: object
+    expenses:
+      items:
+        $ref: '#/components/schemas/expense'
+      type: array
+    payroll:
+      example:
+        payrollRecordsCount: 0
+        records:
+        - monthlyPaymentsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          bonusesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          oysterFeesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          engagement:
+            cutoffMonthDay: 6
+            name: name
+            engagementType: engagementType
+          addOnsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          trueUpsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          benefitsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          allowancesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          taxesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          engagementId: engagementId
+          currencyCode: currencyCode
+        - monthlyPaymentsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          bonusesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          oysterFeesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          engagement:
+            cutoffMonthDay: 6
+            name: name
+            engagementType: engagementType
+          addOnsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          trueUpsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          benefitsTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          allowancesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          taxesTotalAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          engagementId: engagementId
+          currencyCode: currencyCode
+        cutoffTimeForPayroll: 2000-01-23T04:56:07.000+00:00
+        payrollId: payrollId
+        state: state
+        currencyCode: currencyCode
+      properties:
+        payrollId:
+          type: string
+        currencyCode:
+          type: string
+        cutoffTimeForPayroll:
+          format: date-time
+          nullable: true
+          type: string
+        state:
+          type: string
+        payrollRecordsCount:
+          type: integer
+        records:
+          items:
+            $ref: '#/components/schemas/payrollRecord'
+          type: array
+      required:
+      - currencyCode
+      - cutoffTimeForPayroll
+      - payrollId
+      - payrollRecordsCount
+      - state
+      type: object
+    payrollRecord:
+      example:
+        monthlyPaymentsTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        bonusesTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        oysterFeesTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        engagement:
+          cutoffMonthDay: 6
+          name: name
+          engagementType: engagementType
+        addOnsTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        trueUpsTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        benefitsTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        allowancesTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        taxesTotalAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        engagementId: engagementId
+        currencyCode: currencyCode
+      properties:
+        engagementId:
+          type: string
+        currencyCode:
+          type: string
+        monthlyPaymentsTotalAmount:
+          $ref: '#/components/schemas/amount'
+        allowancesTotalAmount:
+          $ref: '#/components/schemas/amount'
+        benefitsTotalAmount:
+          $ref: '#/components/schemas/amount'
+        bonusesTotalAmount:
+          $ref: '#/components/schemas/amount'
+        addOnsTotalAmount:
+          $ref: '#/components/schemas/amount'
+        taxesTotalAmount:
+          $ref: '#/components/schemas/amount'
+        trueUpsTotalAmount:
+          $ref: '#/components/schemas/amount'
+        oysterFeesTotalAmount:
+          $ref: '#/components/schemas/amount'
+        engagement:
+          $ref: '#/components/schemas/payrollRecord_engagement'
+      required:
+      - addOnsTotalAmount
+      - allowancesTotalAmount
+      - benefitsTotalAmount
+      - bonusesTotalAmount
+      - currencyCode
+      - engagement
+      - engagementId
+      - monthlyPaymentsTotalAmount
+      - oysterFeesTotalAmount
+      - taxesTotalAmount
+      - trueUpsTotalAmount
+      type: object
+    payrolls:
+      items:
+        $ref: '#/components/schemas/payroll'
+      type: array
+    timeOffRequest:
+      example:
+        reason: reason
+        periodInHours: 0.8008282
+        timeOffRequestId: timeOffRequestId
+        engagement:
+          countryCode: countryCode
+          name: name
+          type: type
+          engagementId: engagementId
+        endDate: 2000-01-23
+        lastDayDuration: lastDayDuration
+        firstDayDuration: firstDayDuration
+        state: state
+        type: type
+        rejectionReason: rejectionReason
+        requesterComments: requesterComments
+        startDate: 2000-01-23
+      properties:
+        timeOffRequestId:
+          type: string
+        engagement:
+          $ref: '#/components/schemas/timeOffEngagementDetails'
+        startDate:
+          format: date
+          type: string
+        endDate:
+          format: date
+          type: string
+        firstDayDuration:
+          pattern: "^[A-Z_]+$"
+          type: string
+        lastDayDuration:
+          nullable: true
+          pattern: "^[A-Z_]+$"
+          type: string
+        state:
+          pattern: "^[A-Z_]+$"
+          type: string
+        type:
+          pattern: "^[A-Z_]+$"
+          type: string
+        requesterComments:
+          nullable: true
+          type: string
+        rejectionReason:
+          nullable: true
+          type: string
+        reason:
+          pattern: "^[A-Z_]+$"
+          type: string
+        periodInHours:
+          format: float
+          type: number
+      type: object
+    timeOffRequests:
+      items:
+        $ref: '#/components/schemas/timeOffRequest'
+      type: array
+    timeOffEntitlements:
+      items:
+        $ref: '#/components/schemas/timeOffEntitlements_inner'
+      type: array
+    timeOffEngagementDetails:
+      example:
+        countryCode: countryCode
+        name: name
+        type: type
+        engagementId: engagementId
+      properties:
+        engagementId:
+          type: string
+        name:
+          type: string
+        type:
+          pattern: "^[A-Z_]+$"
+          type: string
+        countryCode:
+          type: string
+      type: object
+    meta:
+      example:
+        pages: 5
+        prevUrl: prevUrl
+        firstUrl: firstUrl
+        count: 1
+        lastUrl: lastUrl
+        pageUrl: pageUrl
+        page: 5
+        nextUrl: nextUrl
+        items: 6
+      properties:
+        items:
+          type: integer
+        count:
+          type: integer
+        page:
+          type: integer
+        pages:
+          type: integer
+        firstUrl:
+          type: string
+        lastUrl:
+          type: string
+        pageUrl:
+          type: string
+        nextUrl:
+          type: string
+        prevUrl:
+          type: string
+      type: object
+    asyncResponse:
+      example:
+        meta:
+          operationKey: operationKey
+      properties:
+        meta:
+          $ref: '#/components/schemas/asyncResponse_meta'
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    error:
+      properties:
+        error:
+          properties:
+            message:
+              type: string
+          type: object
+      type: object
+      x-konfig-is-used-in-non-successful-response: true
+      x-do-not-generate: true
+    errors:
+      properties:
+        errors:
+          items:
+            properties:
+              message:
+                type: string
+            type: object
+          type: array
+      type: object
+      x-konfig-is-used-in-non-successful-response: true
+      x-do-not-generate: true
+    fieldErrors:
+      properties:
+        errors:
+          items:
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+            type: object
+          type: array
+      type: object
+      x-konfig-is-used-in-non-successful-response: true
+      x-do-not-generate: true
+    operation:
+      example:
+        request:
+          path: path
+          method: method
+          queryParams: "{}"
+          responseCode: 0
+        data: "{}"
+        meta:
+          success: true
+          completed: true
+      properties:
+        request:
+          $ref: '#/components/schemas/operation_request'
+        data:
+          type: object
+        meta:
+          $ref: '#/components/schemas/operation_meta'
+      type: object
+    AuthenticationCreateAccessTokenRequest:
+      properties:
+        client_id:
+          description: The client_id of your Developer App. This can be found by visting
+            https://app.oysterhr.com/developer
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_id
+        client_secret:
+          description: The secret of your Developer App.
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_secret
+        grant_type:
+          description: First you need to request an `authorization_code`. Afterwards
+            you can request a `refresh_token`.
+          example: authorization_code
+          type: string
+          x-konfig-original-example: authorization_code
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-grant_type
+        code:
+          description: The code is required when requesting an `authorization_code`.
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-code
+        redirect_uri:
+          description: The redirect_uri is required when requesting an `authorization_code`.
+          example: https://example.com/inbound
+          type: string
+          x-konfig-original-example: https://example.com/inbound
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-redirect_uri
+        refresh_token:
+          description: A `refresh_token` is required when requesting a `refresh_token`.
+            A `refresh_token` will be provided when requesting an `authorization_code`
+          example: https://example.com/inbound
+          type: string
+          x-konfig-original-example: https://example.com/inbound
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-refresh_token
+      type: object
+    ExpensesDeclineExpenseRequest:
+      example:
+        reason: reason
+      properties:
+        reason:
+          type: string
+      type: object
+    ExpensesCreateOperationKeyRequest:
+      example:
+        receiptAmount:
+          decimal: decimal
+          currencyCode: currencyCode
+        incurredOn: 2000-01-23
+        name: name
+        description: description
+        category: category
+        receiptUrl: receiptUrl
+        engagementId: engagementId
+      properties:
+        description:
+          type: string
+        engagementId:
+          minLength: 1
+          type: string
+        name:
+          minLength: 1
+          type: string
+        incurredOn:
+          format: date
+          minLength: 1
+          type: string
+        category:
+          minLength: 1
+          type: string
+        receiptUrl:
+          minLength: 1
+          type: string
+        receiptAmount:
+          $ref: '#/components/schemas/ExpensesCreateOperationKeyRequest_receiptAmount'
+      required:
+      - category
+      - engagementId
+      - incurredOn
+      - name
+      - receiptAmount
+      - receiptUrl
+      type: object
+    TimeOffRejectRequestRequest:
+      example:
+        reason: reason
+      properties:
+        reason:
+          type: string
+      required:
+      - reason
+      type: object
+    ExpensesGetByIdResponse:
+      example:
+        data:
+          amount:
+            decimal: decimal
+            currencyCode: currencyCode
+          engagement:
+            name: name
+            engagementType: engagementType
+            engagementId: engagementId
+          incurredOn: 2000-01-23
+          reviewedAt: 2000-01-23T04:56:07.000+00:00
+          description: description
+          source: source
+          receiptAmount:
+            decimal: decimal
+            currencyCode: currencyCode
+          expenseId: expenseId
+          name: name
+          category: category
+          submittedAt: 2000-01-23T04:56:07.000+00:00
+          reviewState: reviewState
+          receiptUrl: https://openapi-generator.tech
+      properties:
+        data:
+          $ref: '#/components/schemas/expense'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    CompanyDetailsRetrieveResponse:
+      example:
+        data:
+          companyId: companyId
+          addresses:
+            corporateAddress:
+              city: city
+              countryCode: countryCode
+              postalCode: postalCode
+              addressLine1: addressLine1
+              addressLine2: addressLine2
+              region: region
+              addressId: addressId
+            billingAddress:
+              city: city
+              countryCode: countryCode
+              postalCode: postalCode
+              addressLine1: addressLine1
+              addressLine2: addressLine2
+              region: region
+              addressId: addressId
+          registrationNumber: registrationNumber
+          name: name
+      properties:
+        data:
+          $ref: '#/components/schemas/company'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    DepartmentsGetAllResponse:
+      example:
+        data:
+        - departmentId: departmentId
+          name: name
+          description: description
+          engagementsCount: 0
+        - departmentId: departmentId
+          name: name
+          description: description
+          engagementsCount: 0
+        meta:
+          pages: 5
+          prevUrl: prevUrl
+          firstUrl: firstUrl
+          count: 1
+          lastUrl: lastUrl
+          pageUrl: pageUrl
+          page: 5
+          nextUrl: nextUrl
+          items: 6
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/department'
+          type: array
+        meta:
+          $ref: '#/components/schemas/meta'
+      required:
+      - data
+      - meta
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    EngagementsGetByIdResponse:
+      example:
+        data:
+          role: role
+          modifiedAt: 2000-01-23T04:56:07.000+00:00
+          contract: "{}"
+          engagementType: EMPLOYMENT
+          employment: "{}"
+          countryCode: countryCode
+          benefitEnrollments:
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          personalDetails:
+            addresses:
+              livingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+              mailingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+            citizenships:
+            - citizenships
+            - citizenships
+            name: name
+            dateOfBirth: dateOfBirth
+            phoneNumbers:
+              default:
+                number: number
+                countryCode: countryCode
+              emergency:
+                number: number
+                countryCode: countryCode
+          state: state
+          terminations:
+          - proposedDate: 2000-01-23
+            state: state
+          - proposedDate: 2000-01-23
+            state: state
+          department:
+            departmentId: departmentId
+            name: name
+            description: description
+          engagementId: engagementId
+          startDate: 2000-01-23
+      properties:
+        data:
+          $ref: '#/components/schemas/engagement'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    EngagementsGetAllResponse:
+      example:
+        data:
+        - role: role
+          modifiedAt: 2000-01-23T04:56:07.000+00:00
+          contract: "{}"
+          engagementType: EMPLOYMENT
+          employment: "{}"
+          countryCode: countryCode
+          benefitEnrollments:
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          personalDetails:
+            addresses:
+              livingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+              mailingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+            citizenships:
+            - citizenships
+            - citizenships
+            name: name
+            dateOfBirth: dateOfBirth
+            phoneNumbers:
+              default:
+                number: number
+                countryCode: countryCode
+              emergency:
+                number: number
+                countryCode: countryCode
+          state: state
+          terminations:
+          - proposedDate: 2000-01-23
+            state: state
+          - proposedDate: 2000-01-23
+            state: state
+          department:
+            departmentId: departmentId
+            name: name
+            description: description
+          engagementId: engagementId
+          startDate: 2000-01-23
+        - role: role
+          modifiedAt: 2000-01-23T04:56:07.000+00:00
+          contract: "{}"
+          engagementType: EMPLOYMENT
+          employment: "{}"
+          countryCode: countryCode
+          benefitEnrollments:
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          - benefitEnrollmentId: benefitEnrollmentId
+            name: name
+            state: state
+            plan:
+              descriptiveName: descriptiveName
+              provider: provider
+          personalDetails:
+            addresses:
+              livingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+              mailingAddress:
+                city: city
+                countryCode: countryCode
+                postalCode: postalCode
+                addressLine1: addressLine1
+                addressLine2: addressLine2
+                region: region
+                addressId: addressId
+            citizenships:
+            - citizenships
+            - citizenships
+            name: name
+            dateOfBirth: dateOfBirth
+            phoneNumbers:
+              default:
+                number: number
+                countryCode: countryCode
+              emergency:
+                number: number
+                countryCode: countryCode
+          state: state
+          terminations:
+          - proposedDate: 2000-01-23
+            state: state
+          - proposedDate: 2000-01-23
+            state: state
+          department:
+            departmentId: departmentId
+            name: name
+            description: description
+          engagementId: engagementId
+          startDate: 2000-01-23
+        meta:
+          pages: 5
+          prevUrl: prevUrl
+          firstUrl: firstUrl
+          count: 1
+          lastUrl: lastUrl
+          pageUrl: pageUrl
+          page: 5
+          nextUrl: nextUrl
+          items: 6
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/engagement'
+          type: array
+        meta:
+          $ref: '#/components/schemas/meta'
+      required:
+      - data
+      - meta
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    OperationsGetByOperationKeyResponse:
+      example:
+        data:
+          request:
+            path: path
+            method: method
+            queryParams: "{}"
+            responseCode: 0
+          data: "{}"
+          meta:
+            success: true
+            completed: true
+      properties:
+        data:
+          $ref: '#/components/schemas/operation'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    PayrollGetByIdResponse:
+      example:
+        data:
+          payrollRecordsCount: 0
+          records:
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          cutoffTimeForPayroll: 2000-01-23T04:56:07.000+00:00
+          payrollId: payrollId
+          state: state
+          currencyCode: currencyCode
+      properties:
+        data:
+          $ref: '#/components/schemas/payroll'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    PayrollGetAllPayrollsResponse:
+      example:
+        data:
+        - payrollRecordsCount: 0
+          records:
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          cutoffTimeForPayroll: 2000-01-23T04:56:07.000+00:00
+          payrollId: payrollId
+          state: state
+          currencyCode: currencyCode
+        - payrollRecordsCount: 0
+          records:
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          - monthlyPaymentsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            bonusesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            oysterFeesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagement:
+              cutoffMonthDay: 6
+              name: name
+              engagementType: engagementType
+            addOnsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            trueUpsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            benefitsTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            allowancesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            taxesTotalAmount:
+              decimal: decimal
+              currencyCode: currencyCode
+            engagementId: engagementId
+            currencyCode: currencyCode
+          cutoffTimeForPayroll: 2000-01-23T04:56:07.000+00:00
+          payrollId: payrollId
+          state: state
+          currencyCode: currencyCode
+        meta:
+          pages: 5
+          prevUrl: prevUrl
+          firstUrl: firstUrl
+          count: 1
+          lastUrl: lastUrl
+          pageUrl: pageUrl
+          page: 5
+          nextUrl: nextUrl
+          items: 6
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/payroll'
+          type: array
+        meta:
+          $ref: '#/components/schemas/meta'
+      required:
+      - data
+      - meta
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    TimeOffGetEntitlementsResponse:
+      example:
+        data:
+        - carried: 1.4658129
+          projectedBalance: 9.301444
+          engagement:
+            countryCode: countryCode
+            name: name
+            type: type
+            engagementId: engagementId
+          adjustedAdhoc: 5.962134
+          accrued: 6.0274563
+          taken: 5.637377
+          annualEntitlement: 0.8008282
+          units: DAYS
+          upcoming: 7.0614014
+          availableBalance: 2.302136
+        - carried: 1.4658129
+          projectedBalance: 9.301444
+          engagement:
+            countryCode: countryCode
+            name: name
+            type: type
+            engagementId: engagementId
+          adjustedAdhoc: 5.962134
+          accrued: 6.0274563
+          taken: 5.637377
+          annualEntitlement: 0.8008282
+          units: DAYS
+          upcoming: 7.0614014
+          availableBalance: 2.302136
+        meta:
+          pages: 5
+          prevUrl: prevUrl
+          firstUrl: firstUrl
+          count: 1
+          lastUrl: lastUrl
+          pageUrl: pageUrl
+          page: 5
+          nextUrl: nextUrl
+          items: 6
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/timeOffEntitlements_inner'
+          type: array
+        meta:
+          $ref: '#/components/schemas/meta'
+      required:
+      - data
+      - meta
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    TimeOffGetRequestResponse:
+      example:
+        data:
+          reason: reason
+          periodInHours: 0.8008282
+          timeOffRequestId: timeOffRequestId
+          engagement:
+            countryCode: countryCode
+            name: name
+            type: type
+            engagementId: engagementId
+          endDate: 2000-01-23
+          lastDayDuration: lastDayDuration
+          firstDayDuration: firstDayDuration
+          state: state
+          type: type
+          rejectionReason: rejectionReason
+          requesterComments: requesterComments
+          startDate: 2000-01-23
+      properties:
+        data:
+          $ref: '#/components/schemas/timeOffRequest'
+      required:
+      - data
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    TimeOffGetAllRequestsResponse:
+      example:
+        data:
+        - reason: reason
+          periodInHours: 0.8008282
+          timeOffRequestId: timeOffRequestId
+          engagement:
+            countryCode: countryCode
+            name: name
+            type: type
+            engagementId: engagementId
+          endDate: 2000-01-23
+          lastDayDuration: lastDayDuration
+          firstDayDuration: firstDayDuration
+          state: state
+          type: type
+          rejectionReason: rejectionReason
+          requesterComments: requesterComments
+          startDate: 2000-01-23
+        - reason: reason
+          periodInHours: 0.8008282
+          timeOffRequestId: timeOffRequestId
+          engagement:
+            countryCode: countryCode
+            name: name
+            type: type
+            engagementId: engagementId
+          endDate: 2000-01-23
+          lastDayDuration: lastDayDuration
+          firstDayDuration: firstDayDuration
+          state: state
+          type: type
+          rejectionReason: rejectionReason
+          requesterComments: requesterComments
+          startDate: 2000-01-23
+        meta:
+          pages: 5
+          prevUrl: prevUrl
+          firstUrl: firstUrl
+          count: 1
+          lastUrl: lastUrl
+          pageUrl: pageUrl
+          page: 5
+          nextUrl: nextUrl
+          items: 6
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/timeOffRequest'
+          type: array
+        meta:
+          $ref: '#/components/schemas/meta'
+      required:
+      - data
+      - meta
+      type: object
+      x-konfig-is-used-in-successful-response: true
+    konfig-generated-schema-components-schemas-Token-properties-access_token:
+      example: 1234ABCD
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-Token-properties-token_type:
+      example: Bearer
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-Token-properties-expires_in:
+      example: 7200
+      type: number
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-Token-properties-refresh_token:
+      example: 1234ABCD
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-Token-properties-scope:
+      example: read
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-Token-properties-created_at:
+      example: 167474949830
+      type: number
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_id:
+      example: 1234ABCD
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_secret:
+      example: 1234ABCD
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-grant_type:
+      example: authorization_code
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-code:
+      example: 1234ABCD
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-redirect_uri:
+      example: https://example.com/inbound
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-refresh_token:
+      example: https://example.com/inbound
+      type: string
+      x-do-not-generate: true
+    konfig-generated-schema-single-parameter-schema-post--oauth2-token:
+      properties:
+        client_id:
+          description: The client_id of your Developer App. This can be found by visting
+            https://app.oysterhr.com/developer
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_id
+        client_secret:
+          description: The secret of your Developer App.
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-client_secret
+        grant_type:
+          description: First you need to request an `authorization_code`. Afterwards
+            you can request a `refresh_token`.
+          example: authorization_code
+          type: string
+          x-konfig-original-example: authorization_code
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-grant_type
+        code:
+          description: The code is required when requesting an `authorization_code`.
+          example: 1234ABCD
+          type: string
+          x-konfig-original-example: 1234ABCD
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-code
+        redirect_uri:
+          description: The redirect_uri is required when requesting an `authorization_code`.
+          example: https://example.com/inbound
+          type: string
+          x-konfig-original-example: https://example.com/inbound
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-redirect_uri
+        refresh_token:
+          description: A `refresh_token` is required when requesting a `refresh_token`.
+            A `refresh_token` will be provided when requesting an `authorization_code`
+          example: https://example.com/inbound
+          type: string
+          x-konfig-original-example: https://example.com/inbound
+          x-konfig-generated-schema: konfig-generated-schema-components-schemas-AuthenticationCreateAccessTokenRequest-properties-refresh_token
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter: []
+    konfig-generated-schema-single-parameter-schema-post--v1-expenses-id-approve:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-post--v1-expenses-id-decline:
+      properties:
+        id:
+          type: string
+        reason:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-get--v1-expenses-id:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-post--v1-expenses:
+      properties:
+        description:
+          type: string
+        engagementId:
+          minLength: 1
+          type: string
+        name:
+          minLength: 1
+          type: string
+        incurredOn:
+          format: date
+          minLength: 1
+          type: string
+        category:
+          minLength: 1
+          type: string
+        receiptUrl:
+          minLength: 1
+          type: string
+        receiptAmount:
+          properties:
+            decimal:
+              minLength: 1
+              type: string
+            currencyCode:
+              minLength: 1
+              type: string
+          required:
+          - currencyCode
+          - decimal
+          type: object
+      required:
+      - category
+      - engagementId
+      - incurredOn
+      - name
+      - receiptAmount
+      - receiptUrl
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter: []
+    konfig-generated-schema-single-parameter-schema-get--v1-company:
+      properties: {}
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter: []
+    konfig-generated-schema-single-parameter-schema-get--v1-departments:
+      properties:
+        per_page:
+          type: integer
+        page:
+          type: integer
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - per_page
+      - page
+    konfig-generated-schema-single-parameter-schema-get--v1-engagements-id:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-get--v1-engagements:
+      properties:
+        per_page:
+          type: integer
+        page:
+          type: integer
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - per_page
+      - page
+    konfig-generated-schema-single-parameter-schema-get--v1-meta-operations-operation_key:
+      properties:
+        operation_key:
+          type: string
+      required:
+      - operation_key
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - operation_key
+    konfig-generated-schema-single-parameter-schema-get--v1-payroll-id:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-get--v1-payroll:
+      properties:
+        per_page:
+          type: integer
+        page:
+          type: integer
+        from:
+          type: string
+        to:
+          type: string
+        include_records:
+          type: boolean
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - per_page
+      - page
+      - from
+      - to
+      - include_records
+    konfig-generated-schema-single-parameter-schema-get--v1-time_off-entitlements:
+      properties:
+        per_page:
+          type: integer
+        page:
+          type: integer
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - per_page
+      - page
+    konfig-generated-schema-single-parameter-schema-post--v1-time_off-requests-id-approve:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-post--v1-time_off-requests-id-reject:
+      properties:
+        id:
+          type: string
+        reason:
+          type: string
+      required:
+      - id
+      - reason
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-get--v1-time_off-requests-id:
+      properties:
+        id:
+          type: string
+      required:
+      - id
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - id
+    konfig-generated-schema-single-parameter-schema-get--v1-time_off-requests:
+      properties:
+        per_page:
+          type: integer
+        page:
+          type: integer
+      type: object
+      x-do-not-generate: true
+      x-konfig-is-parameter:
+      - per_page
+      - page
+    company_addresses:
+      example:
+        corporateAddress:
+          city: city
+          countryCode: countryCode
+          postalCode: postalCode
+          addressLine1: addressLine1
+          addressLine2: addressLine2
+          region: region
+          addressId: addressId
+        billingAddress:
+          city: city
+          countryCode: countryCode
+          postalCode: postalCode
+          addressLine1: addressLine1
+          addressLine2: addressLine2
+          region: region
+          addressId: addressId
+      properties:
+        corporateAddress:
+          $ref: '#/components/schemas/address'
+        billingAddress:
+          $ref: '#/components/schemas/address'
+      type: object
+    engagement_personalDetails_addresses:
+      example:
+        livingAddress:
+          city: city
+          countryCode: countryCode
+          postalCode: postalCode
+          addressLine1: addressLine1
+          addressLine2: addressLine2
+          region: region
+          addressId: addressId
+        mailingAddress:
+          city: city
+          countryCode: countryCode
+          postalCode: postalCode
+          addressLine1: addressLine1
+          addressLine2: addressLine2
+          region: region
+          addressId: addressId
+      properties:
+        livingAddress:
+          $ref: '#/components/schemas/address'
+        mailingAddress:
+          $ref: '#/components/schemas/address'
+      type: object
+    engagement_personalDetails_phoneNumbers:
+      example:
+        default:
+          number: number
+          countryCode: countryCode
+        emergency:
+          number: number
+          countryCode: countryCode
+      properties:
+        default:
+          $ref: '#/components/schemas/phoneNumber'
+        emergency:
+          $ref: '#/components/schemas/phoneNumber'
+      type: object
+    engagement_personalDetails:
+      example:
+        addresses:
+          livingAddress:
+            city: city
+            countryCode: countryCode
+            postalCode: postalCode
+            addressLine1: addressLine1
+            addressLine2: addressLine2
+            region: region
+            addressId: addressId
+          mailingAddress:
+            city: city
+            countryCode: countryCode
+            postalCode: postalCode
+            addressLine1: addressLine1
+            addressLine2: addressLine2
+            region: region
+            addressId: addressId
+        citizenships:
+        - citizenships
+        - citizenships
+        name: name
+        dateOfBirth: dateOfBirth
+        phoneNumbers:
+          default:
+            number: number
+            countryCode: countryCode
+          emergency:
+            number: number
+            countryCode: countryCode
+      properties:
+        name:
+          nullable: true
+          type: string
+        addresses:
+          $ref: '#/components/schemas/engagement_personalDetails_addresses'
+        citizenships:
+          items:
+            nullable: true
+            type: string
+          type: array
+        dateOfBirth:
+          nullable: true
+          type: string
+        phoneNumbers:
+          $ref: '#/components/schemas/engagement_personalDetails_phoneNumbers'
+      required:
+      - addresses
+      - name
+      type: object
+    engagement_benefitEnrollments_inner_plan:
+      example:
+        descriptiveName: descriptiveName
+        provider: provider
+      properties:
+        provider:
+          type: string
+        descriptiveName:
+          type: string
+      type: object
+    engagement_benefitEnrollments_inner:
+      example:
+        benefitEnrollmentId: benefitEnrollmentId
+        name: name
+        state: state
+        plan:
+          descriptiveName: descriptiveName
+          provider: provider
+      properties:
+        benefitEnrollmentId:
+          type: string
+        plan:
+          $ref: '#/components/schemas/engagement_benefitEnrollments_inner_plan'
+        name:
+          type: string
+        state:
+          type: string
+      type: object
+    engagement_terminations_inner:
+      example:
+        proposedDate: 2000-01-23
+        state: state
+      properties:
+        state:
+          type: string
+        proposedDate:
+          format: date
+          type: string
+      type: object
+    engagement_department:
+      example:
+        departmentId: departmentId
+        name: name
+        description: description
+      nullable: true
+      properties:
+        description:
+          type: string
+        departmentId:
+          type: string
+        name:
+          type: string
+      type: object
+    expense_engagement:
+      example:
+        name: name
+        engagementType: engagementType
+        engagementId: engagementId
+      properties:
+        engagementId:
+          type: string
+        name:
+          nullable: true
+          type: string
+        engagementType:
+          pattern: "^[A-Z_]+$"
+          type: string
+      type: object
+    payrollRecord_engagement:
+      example:
+        cutoffMonthDay: 6
+        name: name
+        engagementType: engagementType
+      properties:
+        name:
+          type: string
+        cutoffMonthDay:
+          type: integer
+        engagementType:
+          type: string
+      required:
+      - cutoffMonthDay
+      - engagementType
+      - name
+      type: object
+    timeOffEntitlements_inner:
+      example:
+        carried: 1.4658129
+        projectedBalance: 9.301444
+        engagement:
+          countryCode: countryCode
+          name: name
+          type: type
+          engagementId: engagementId
+        adjustedAdhoc: 5.962134
+        accrued: 6.0274563
+        taken: 5.637377
+        annualEntitlement: 0.8008282
+        units: DAYS
+        upcoming: 7.0614014
+        availableBalance: 2.302136
+      properties:
+        engagement:
+          $ref: '#/components/schemas/timeOffEngagementDetails'
+        annualEntitlement:
+          format: float
+          type: number
+        accrued:
+          format: float
+          type: number
+        carried:
+          format: float
+          type: number
+        adjustedAdhoc:
+          format: float
+          type: number
+        taken:
+          format: float
+          type: number
+        availableBalance:
+          format: float
+          type: number
+        upcoming:
+          format: float
+          type: number
+        projectedBalance:
+          format: float
+          type: number
+        units:
+          enum:
+          - DAYS
+          type: string
+      type: object
+    asyncResponse_meta:
+      example:
+        operationKey: operationKey
+      properties:
+        operationKey:
+          type: string
+      type: object
+    operation_request:
+      example:
+        path: path
+        method: method
+        queryParams: "{}"
+        responseCode: 0
+      properties:
+        method:
+          type: string
+        path:
+          type: string
+        queryParams:
+          type: object
+        responseCode:
+          type: integer
+      type: object
+    operation_meta:
+      example:
+        success: true
+        completed: true
+      properties:
+        completed:
+          type: boolean
+        success:
+          type: boolean
+      type: object
+    ExpensesCreateOperationKeyRequest_receiptAmount:
+      example:
+        decimal: decimal
+        currencyCode: currencyCode
+      properties:
+        decimal:
+          minLength: 1
+          type: string
+        currencyCode:
+          minLength: 1
+          type: string
+      required:
+      - currencyCode
+      - decimal
+      type: object
+  securitySchemes:
+    bearer_auth:
+      scheme: bearer
+      type: http
+      x-konfig-globally-required-security: false
+x-readme:
+  explorer-enabled: true
+  proxy-enabled: true
+  samples-enabled: true
+
